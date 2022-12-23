@@ -37,49 +37,49 @@ def per_vertex_occlusion(mesh, err_proportion=0.0001, err_norm="z", render_width
     return err < threshold
 
 
-def per_vertex_occlusion_accurate(mesh):
-    from menpo3d.vtkutils import trimesh_to_vtk
-    import vtk
+# def per_vertex_occlusion_accurate(mesh):
+#     from menpo3d.vtkutils import trimesh_to_vtk
+#     import vtk
 
-    tol = mesh.mean_edge_length() / 1000
-    min_, max_ = mesh.bounds()
-    z_min = min_[-1] - 10
-    z_max = max_[-1] + 10
+#     tol = mesh.mean_edge_length() / 1000
+#     min_, max_ = mesh.bounds()
+#     z_min = min_[-1] - 10
+#     z_max = max_[-1] + 10
 
-    ray_start = mesh.points.copy()
-    ray_end = mesh.points.copy()
-    points = mesh.points
-    ray_start[:, 2] = z_min
-    ray_end[:, 2] = z_max
+#     ray_start = mesh.points.copy()
+#     ray_end = mesh.points.copy()
+#     points = mesh.points
+#     ray_start[:, 2] = z_min
+#     ray_end[:, 2] = z_max
 
-    vtk_mesh = trimesh_to_vtk(mesh)
+#     vtk_mesh = trimesh_to_vtk(mesh)
 
-    obbTree = vtk.vtkOBBTree()
-    obbTree.SetDataSet(vtk_mesh)
-    obbTree.BuildLocator()
+#     obbTree = vtk.vtkOBBTree()
+#     obbTree.SetDataSet(vtk_mesh)
+#     obbTree.BuildLocator()
 
-    vtk_points = vtk.vtkPoints()
-    vtk_cellIds = vtk.vtkIdList()
-    bad_val = tuple(ray_start[0])
-    first_intersects = []
-    for start, end, point in zip(ray_start, ray_end, points):
-        start = tuple(start)
-        end = tuple(end)
-        obbTree.IntersectWithLine(start, end, vtk_points, vtk_cellIds)
-        data = vtk_points.GetData()
-        break
-    for start, end, point in zip(ray_start, ray_end, points):
-        start = tuple(start)
-        end = tuple(end)
-        # obbTree.IntersectWithLine(start, end, vtk_points, vtk_cellIds)
-        data = vtk_points.GetData()
-        if data.GetNumberOfTuples() > 0:
-            first_intersects.append(data.GetTuple3(0))
-        else:
-            first_intersects.append(bad_val)
+#     vtk_points = vtk.vtkPoints()
+#     vtk_cellIds = vtk.vtkIdList()
+#     bad_val = tuple(ray_start[0])
+#     first_intersects = []
+#     for start, end, point in zip(ray_start, ray_end, points):
+#         start = tuple(start)
+#         end = tuple(end)
+#         obbTree.IntersectWithLine(start, end, vtk_points, vtk_cellIds)
+#         data = vtk_points.GetData()
+#         break
+#     for start, end, point in zip(ray_start, ray_end, points):
+#         start = tuple(start)
+#         end = tuple(end)
+#         # obbTree.IntersectWithLine(start, end, vtk_points, vtk_cellIds)
+#         data = vtk_points.GetData()
+#         if data.GetNumberOfTuples() > 0:
+#             first_intersects.append(data.GetTuple3(0))
+#         else:
+#             first_intersects.append(bad_val)
 
-    visible = np.linalg.norm(points - np.array(first_intersects), axis=1) < tol
-    return visible
+#     visible = np.linalg.norm(points - np.array(first_intersects), axis=1) < tol
+#     return visible
 
 
 def extract_per_vertex_colour(mesh, image):

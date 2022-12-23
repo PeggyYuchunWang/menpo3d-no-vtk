@@ -1,6 +1,6 @@
 import numpy as np
 from menpo.shape import PointCloud, TriMesh, ColouredTriMesh, TexturedTriMesh
-from .vtkutils import trimesh_to_vtk, VTKClosestPointLocator
+# from .vtkutils import trimesh_to_vtk, VTKClosestPointLocator
 
 
 def barycentric_coordinates(point, a, b, c):
@@ -38,28 +38,28 @@ def barycentric_points_from_contained_points(self, pointcloud, tri_index):
     return np.vstack([u, v, w]).T
 
 
-def snap_pointcloud_to_surface(self, pointcloud):
-    r"""Constrain points in a :map:`PointCloud: to lie as close as possible to
-    this :map:`TriMesh`.
+# def snap_pointcloud_to_surface(self, pointcloud):
+#     r"""Constrain points in a :map:`PointCloud: to lie as close as possible to
+#     this :map:`TriMesh`.
 
-    Each point in the provided `pointcloud` will be projected to the surface
-    of this mesh in the minimum possible distance.
+#     Each point in the provided `pointcloud` will be projected to the surface
+#     of this mesh in the minimum possible distance.
 
-    Parameters
-    ----------
-    pointcloud : :map:`PointCloud`
-        The pointcloud that will be projected onto this mesh.
+#     Parameters
+#     ----------
+#     pointcloud : :map:`PointCloud`
+#         The pointcloud that will be projected onto this mesh.
 
-    Returns
-    -------
-    snapped_pointcloud, tri_indices : :map:`PointCloud`, ``(n_points, )`` `ndarray`
-        A tuple of the snapped :map`PointCloud` and the indices of the
-        triangles involved in the snapping.
-    """
-    vtk_mesh = trimesh_to_vtk(self)
-    locator = VTKClosestPointLocator(vtk_mesh)
-    snapped_points, indices = locator(pointcloud.points)
-    return PointCloud(snapped_points, copy=False), indices
+#     Returns
+#     -------
+#     snapped_pointcloud, tri_indices : :map:`PointCloud`, ``(n_points, )`` `ndarray`
+#         A tuple of the snapped :map`PointCloud` and the indices of the
+#         triangles involved in the snapping.
+#     """
+#     vtk_mesh = trimesh_to_vtk(self)
+#     locator = VTKClosestPointLocator(vtk_mesh)
+#     snapped_points, indices = locator(pointcloud.points)
+#     return PointCloud(snapped_points, copy=False), indices
 
 
 def barycentric_coordinates_of_pointcloud(self, pointcloud):

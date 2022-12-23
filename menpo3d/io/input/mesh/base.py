@@ -60,273 +60,273 @@ def _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex):
     return obj
 
 
-def vtk_ensure_trilist(polydata):
-    try:
-        import vtk
-        from vtk.util.numpy_support import vtk_to_numpy
+# def vtk_ensure_trilist(polydata):
+#     try:
+#         import vtk
+#         from vtk.util.numpy_support import vtk_to_numpy
 
-        trilist = vtk_to_numpy(polydata.GetPolys().GetData())
+#         trilist = vtk_to_numpy(polydata.GetPolys().GetData())
 
-        # 5 is the triangle type - if we have another type we need to
-        # use a vtkTriangleFilter
-        c = vtk.vtkCellTypes()
-        polydata.GetCellTypes(c)
+#         # 5 is the triangle type - if we have another type we need to
+#         # use a vtkTriangleFilter
+#         c = vtk.vtkCellTypes()
+#         polydata.GetCellTypes(c)
 
-        if c.GetNumberOfTypes() != 1 or polydata.GetCellType(0) != 5:
-            warnings.warn(
-                "Non-triangular mesh connectivity was detected - "
-                "this is currently unsupported and thus the "
-                "connectivity is being coerced into a triangular "
-                "mesh. This may have unintended consequences."
-            )
-            t_filter = vtk.vtkTriangleFilter()
-            t_filter.SetInputData(polydata)
-            t_filter.Update()
-            trilist = vtk_to_numpy(t_filter.GetOutput().GetPolys().GetData())
+#         if c.GetNumberOfTypes() != 1 or polydata.GetCellType(0) != 5:
+#             warnings.warn(
+#                 "Non-triangular mesh connectivity was detected - "
+#                 "this is currently unsupported and thus the "
+#                 "connectivity is being coerced into a triangular "
+#                 "mesh. This may have unintended consequences."
+#             )
+#             t_filter = vtk.vtkTriangleFilter()
+#             t_filter.SetInputData(polydata)
+#             t_filter.Update()
+#             trilist = vtk_to_numpy(t_filter.GetOutput().GetPolys().GetData())
 
-        return trilist.reshape([-1, 4])[:, 1:]
-    except Exception as e:
-        warnings.warn(str(e))
-        return None
-
-
-def wrl_importer(filepath, asset=None, texture_resolver=None, **kwargs):
-    """Allows importing VRML 2.0 meshes.
-
-    Uses VTK and assumes that the first actor in the scene is the one
-    that we want.
-
-    Parameters
-    ----------
-    asset : `object`, optional
-        An optional asset that may help with loading. This is unused for this
-        implementation.
-    texture_resolver : `callable`, optional
-        A callable that recieves the mesh filepath and returns a single
-        path to the texture to load.
-    \**kwargs : `dict`, optional
-        Any other keyword arguments.
-
-    Returns
-    -------
-    shape : :map:`PointCloud` or subclass
-        The correct shape for the given inputs.
-    """
-    import vtk
-    from vtk.util.numpy_support import vtk_to_numpy
-
-    vrml_importer = vtk.vtkVRMLImporter()
-    vrml_importer.SetFileName(str(filepath))
-    vrml_importer.Update()
-
-    # Get the first actor.
-    actors = vrml_importer.GetRenderer().GetActors()
-    actors.InitTraversal()
-    mapper = actors.GetNextActor().GetMapper()
-    mapper_dataset = mapper.GetInput()
-
-    if actors.GetNextActor():
-        # There was more than one actor!
-        warnings.warn(
-            "More than one actor was detected in the scene. Only "
-            "single scene actors are currently supported."
-        )
-
-    # Get the Data
-    polydata = vtk.vtkPolyData.SafeDownCast(mapper_dataset)
-
-    # We must have point data!
-    points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
-
-    trilist = vtk_ensure_trilist(polydata)
-
-    texture = None
-    if texture_resolver is not None:
-        texture_path = texture_resolver(filepath)
-        if texture_path is not None and texture_path.exists():
-            texture = mio.import_image(texture_path)
-
-    # Three different outcomes - either we have a textured mesh, a coloured
-    # mesh or just a plain mesh. Let's try each in turn.
-
-    # Textured
-    tcoords = None
-    try:
-        tcoords = vtk_to_numpy(polydata.GetPointData().GetTCoords())
-    except Exception:
-        pass
-
-    if isinstance(tcoords, np.ndarray) and tcoords.size == 0:
-        tcoords = None
-
-    # Colour-per-vertex
-    try:
-        colour_per_vertex = vtk_to_numpy(mapper.GetLookupTable().GetTable()) / 255.0
-    except Exception:
-        pass
-
-    if isinstance(colour_per_vertex, np.ndarray) and colour_per_vertex.size == 0:
-        colour_per_vertex = None
-
-    return _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex)
+#         return trilist.reshape([-1, 4])[:, 1:]
+#     except Exception as e:
+#         warnings.warn(str(e))
+#         return None
 
 
-def obj_importer(filepath, asset=None, texture_resolver=None, **kwargs):
-    """Allows importing Wavefront (OBJ) files.
+# def wrl_importer(filepath, asset=None, texture_resolver=None, **kwargs):
+#     """Allows importing VRML 2.0 meshes.
 
-    Uses VTK.
+#     Uses VTK and assumes that the first actor in the scene is the one
+#     that we want.
 
-    Parameters
-    ----------
-    asset : `object`, optional
-        An optional asset that may help with loading. This is unused for this
-        implementation.
-    texture_resolver : `callable`, optional
-        A callable that recieves the mesh filepath and returns a single
-        path to the texture to load.
-    \**kwargs : `dict`, optional
-        Any other keyword arguments.
+#     Parameters
+#     ----------
+#     asset : `object`, optional
+#         An optional asset that may help with loading. This is unused for this
+#         implementation.
+#     texture_resolver : `callable`, optional
+#         A callable that recieves the mesh filepath and returns a single
+#         path to the texture to load.
+#     \**kwargs : `dict`, optional
+#         Any other keyword arguments.
 
-    Returns
-    -------
-    shape : :map:`PointCloud` or subclass
-        The correct shape for the given inputs.
-    """
-    import vtk
-    from vtk.util.numpy_support import vtk_to_numpy
+#     Returns
+#     -------
+#     shape : :map:`PointCloud` or subclass
+#         The correct shape for the given inputs.
+#     """
+#     import vtk
+#     from vtk.util.numpy_support import vtk_to_numpy
 
-    obj_importer = vtk.vtkOBJReader()
-    obj_importer.SetFileName(str(filepath))
-    obj_importer.Update()
+#     vrml_importer = vtk.vtkVRMLImporter()
+#     vrml_importer.SetFileName(str(filepath))
+#     vrml_importer.Update()
 
-    # Get the output
-    polydata = obj_importer.GetOutput()
+#     # Get the first actor.
+#     actors = vrml_importer.GetRenderer().GetActors()
+#     actors.InitTraversal()
+#     mapper = actors.GetNextActor().GetMapper()
+#     mapper_dataset = mapper.GetInput()
 
-    # We must have point data!
-    points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
+#     if actors.GetNextActor():
+#         # There was more than one actor!
+#         warnings.warn(
+#             "More than one actor was detected in the scene. Only "
+#             "single scene actors are currently supported."
+#         )
 
-    trilist = np.require(vtk_ensure_trilist(polydata), requirements=["C"])
+#     # Get the Data
+#     polydata = vtk.vtkPolyData.SafeDownCast(mapper_dataset)
 
-    texture = None
-    if texture_resolver is not None:
-        texture_path = texture_resolver(filepath)
-        if texture_path is not None and texture_path.exists():
-            texture = mio.import_image(texture_path)
+#     # We must have point data!
+#     points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
 
-    tcoords = None
-    if texture is not None:
-        try:
-            tcoords = vtk_to_numpy(polydata.GetPointData().GetTCoords())
-        except Exception:
-            pass
+#     trilist = vtk_ensure_trilist(polydata)
 
-        if isinstance(tcoords, np.ndarray) and tcoords.size == 0:
-            tcoords = None
+#     texture = None
+#     if texture_resolver is not None:
+#         texture_path = texture_resolver(filepath)
+#         if texture_path is not None and texture_path.exists():
+#             texture = mio.import_image(texture_path)
 
-    colour_per_vertex = None
-    return _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex)
+#     # Three different outcomes - either we have a textured mesh, a coloured
+#     # mesh or just a plain mesh. Let's try each in turn.
 
+#     # Textured
+#     tcoords = None
+#     try:
+#         tcoords = vtk_to_numpy(polydata.GetPointData().GetTCoords())
+#     except Exception:
+#         pass
 
-def ply_importer(filepath, asset=None, texture_resolver=None, **kwargs):
-    """Allows importing Wavefront (OBJ) files.
+#     if isinstance(tcoords, np.ndarray) and tcoords.size == 0:
+#         tcoords = None
 
-    Uses VTK.
+#     # Colour-per-vertex
+#     try:
+#         colour_per_vertex = vtk_to_numpy(mapper.GetLookupTable().GetTable()) / 255.0
+#     except Exception:
+#         pass
 
-    Parameters
-    ----------
-    asset : `object`, optional
-        An optional asset that may help with loading. This is unused for this
-        implementation.
-    texture_resolver : `callable`, optional
-        A callable that recieves the mesh filepath and returns a single
-        path to the texture to load.
-    \**kwargs : `dict`, optional
-        Any other keyword arguments.
+#     if isinstance(colour_per_vertex, np.ndarray) and colour_per_vertex.size == 0:
+#         colour_per_vertex = None
 
-    Returns
-    -------
-    shape : :map:`PointCloud` or subclass
-        The correct shape for the given inputs.
-    """
-    import vtk
-    from vtk.util.numpy_support import vtk_to_numpy
-
-    ply_importer = vtk.vtkPLYReader()
-    ply_importer.SetFileName(str(filepath))
-
-    ply_importer.Update()
-
-    # Get the output
-    polydata = ply_importer.GetOutput()
-
-    # We must have point data!
-    points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
-
-    trilist = np.require(vtk_ensure_trilist(polydata), requirements=["C"])
-    point_data = polydata.GetPointData()
-
-    texture = None
-    if texture_resolver is not None:
-        texture_path = texture_resolver(filepath)
-        if texture_path is not None and texture_path.exists():
-            texture = mio.import_image(texture_path)
-
-    tcoords = None
-    if texture is not None:
-        try:
-            tcoords = vtk_to_numpy(point_data.GetTCoords())
-        except Exception:
-            pass
-
-        if isinstance(tcoords, np.ndarray) and tcoords.size == 0:
-            tcoords = None
-
-    scalar_per_vertex = point_data.GetScalars()
-    if scalar_per_vertex is not None:
-        scalar_per_vertex = vtk_to_numpy(scalar_per_vertex)[:, :3]
-        if scalar_per_vertex.dtype == np.uint8:
-            # Convert to [0, 1] floats
-            scalar_per_vertex = scalar_per_vertex * (1 / 255.0)
-
-    return _construct_shape_type(points, trilist, tcoords, texture, scalar_per_vertex)
+#     return _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex)
 
 
-def stl_importer(filepath, asset=None, **kwargs):
-    """Allows importing Stereolithography CAD (STL) files.
+# def obj_importer(filepath, asset=None, texture_resolver=None, **kwargs):
+#     """Allows importing Wavefront (OBJ) files.
 
-    Uses VTK.
+#     Uses VTK.
 
-    Parameters
-    ----------
-    asset : `object`, optional
-        An optional asset that may help with loading. This is unused for this
-        implementation.
-    \**kwargs : `dict`, optional
-        Any other keyword arguments.
+#     Parameters
+#     ----------
+#     asset : `object`, optional
+#         An optional asset that may help with loading. This is unused for this
+#         implementation.
+#     texture_resolver : `callable`, optional
+#         A callable that recieves the mesh filepath and returns a single
+#         path to the texture to load.
+#     \**kwargs : `dict`, optional
+#         Any other keyword arguments.
 
-    Returns
-    -------
-    shape : :map:`PointCloud` or subclass
-        The correct shape for the given inputs.
-    """
-    import vtk
-    from vtk.util.numpy_support import vtk_to_numpy
+#     Returns
+#     -------
+#     shape : :map:`PointCloud` or subclass
+#         The correct shape for the given inputs.
+#     """
+#     import vtk
+#     from vtk.util.numpy_support import vtk_to_numpy
 
-    stl_importer = vtk.vtkSTLReader()
-    stl_importer.SetFileName(str(filepath))
-    stl_importer.Update()
+#     obj_importer = vtk.vtkOBJReader()
+#     obj_importer.SetFileName(str(filepath))
+#     obj_importer.Update()
 
-    # Get the output
-    polydata = stl_importer.GetOutput()
+#     # Get the output
+#     polydata = obj_importer.GetOutput()
 
-    # We must have point data!
-    points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
-    trilist = np.require(vtk_ensure_trilist(polydata), requirements=["C"])
+#     # We must have point data!
+#     points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
 
-    colour_per_vertex = None
-    tcoords = None
-    texture = None
-    return _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex)
+#     trilist = np.require(vtk_ensure_trilist(polydata), requirements=["C"])
+
+#     texture = None
+#     if texture_resolver is not None:
+#         texture_path = texture_resolver(filepath)
+#         if texture_path is not None and texture_path.exists():
+#             texture = mio.import_image(texture_path)
+
+#     tcoords = None
+#     if texture is not None:
+#         try:
+#             tcoords = vtk_to_numpy(polydata.GetPointData().GetTCoords())
+#         except Exception:
+#             pass
+
+#         if isinstance(tcoords, np.ndarray) and tcoords.size == 0:
+#             tcoords = None
+
+#     colour_per_vertex = None
+#     return _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex)
+
+
+# def ply_importer(filepath, asset=None, texture_resolver=None, **kwargs):
+#     """Allows importing Wavefront (OBJ) files.
+
+#     Uses VTK.
+
+#     Parameters
+#     ----------
+#     asset : `object`, optional
+#         An optional asset that may help with loading. This is unused for this
+#         implementation.
+#     texture_resolver : `callable`, optional
+#         A callable that recieves the mesh filepath and returns a single
+#         path to the texture to load.
+#     \**kwargs : `dict`, optional
+#         Any other keyword arguments.
+
+#     Returns
+#     -------
+#     shape : :map:`PointCloud` or subclass
+#         The correct shape for the given inputs.
+#     """
+#     import vtk
+#     from vtk.util.numpy_support import vtk_to_numpy
+
+#     ply_importer = vtk.vtkPLYReader()
+#     ply_importer.SetFileName(str(filepath))
+
+#     ply_importer.Update()
+
+#     # Get the output
+#     polydata = ply_importer.GetOutput()
+
+#     # We must have point data!
+#     points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
+
+#     trilist = np.require(vtk_ensure_trilist(polydata), requirements=["C"])
+#     point_data = polydata.GetPointData()
+
+#     texture = None
+#     if texture_resolver is not None:
+#         texture_path = texture_resolver(filepath)
+#         if texture_path is not None and texture_path.exists():
+#             texture = mio.import_image(texture_path)
+
+#     tcoords = None
+#     if texture is not None:
+#         try:
+#             tcoords = vtk_to_numpy(point_data.GetTCoords())
+#         except Exception:
+#             pass
+
+#         if isinstance(tcoords, np.ndarray) and tcoords.size == 0:
+#             tcoords = None
+
+#     scalar_per_vertex = point_data.GetScalars()
+#     if scalar_per_vertex is not None:
+#         scalar_per_vertex = vtk_to_numpy(scalar_per_vertex)[:, :3]
+#         if scalar_per_vertex.dtype == np.uint8:
+#             # Convert to [0, 1] floats
+#             scalar_per_vertex = scalar_per_vertex * (1 / 255.0)
+
+#     return _construct_shape_type(points, trilist, tcoords, texture, scalar_per_vertex)
+
+
+# def stl_importer(filepath, asset=None, **kwargs):
+#     """Allows importing Stereolithography CAD (STL) files.
+
+#     Uses VTK.
+
+#     Parameters
+#     ----------
+#     asset : `object`, optional
+#         An optional asset that may help with loading. This is unused for this
+#         implementation.
+#     \**kwargs : `dict`, optional
+#         Any other keyword arguments.
+
+#     Returns
+#     -------
+#     shape : :map:`PointCloud` or subclass
+#         The correct shape for the given inputs.
+#     """
+#     import vtk
+#     from vtk.util.numpy_support import vtk_to_numpy
+
+#     stl_importer = vtk.vtkSTLReader()
+#     stl_importer.SetFileName(str(filepath))
+#     stl_importer.Update()
+
+#     # Get the output
+#     polydata = stl_importer.GetOutput()
+
+#     # We must have point data!
+#     points = vtk_to_numpy(polydata.GetPoints().GetData()).astype(np.float)
+#     trilist = np.require(vtk_ensure_trilist(polydata), requirements=["C"])
+
+#     colour_per_vertex = None
+#     tcoords = None
+#     texture = None
+#     return _construct_shape_type(points, trilist, tcoords, texture, colour_per_vertex)
 
 
 def mjson_importer(filepath, asset=None, texture_resolver=True, **kwargs):
